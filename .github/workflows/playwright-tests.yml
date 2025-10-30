@@ -1,0 +1,127 @@
+name: Playwright Cucumber Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run tests against'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      browser:
+        description: 'Browser to run tests on'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+      parallel:
+        description: 'Number of parallel workers'
+        required: false
+        default: '2'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ github.event.inputs.browser == 'all' && fromJSON('["chromium", "firefox", "webkit"]') || fromJSON(format('["{0}"]', github.event.inputs.browser || 'chromium')) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Create .env file
+        run: |
+          echo "TEST_ENV=${{ github.event.inputs.environment || 'ci' }}" >> .env
+          echo "BROWSER=${{ matrix.browser }}" >> .env
+          echo "HEADLESS=true" >> .env
+          echo "PARALLEL_WORKERS=${{ github.event.inputs.parallel || '2' }}" >> .env
+          echo "VIDEO_RECORDING=true" >> .env
+          echo "VIDEO_MODE=on-first-retry" >> .env
+          echo "SCREENSHOT_ON_FAILURE=true" >> .env
+          echo "TRACE_ENABLED=true" >> .env
+          echo "TRACE_MODE=retain-on-failure" >> .env
+          echo "CI=true" >> .env
+
+      - name: Run tests
+        run: npm run test:ci
+        env:
+          BROWSER: ${{ matrix.browser }}
+          TEST_ENV: ${{ github.event.inputs.environment || 'ci' }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.browser }}
+          path: |
+            test-results/
+            logs/
+          retention-days: 30
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-${{ matrix.browser }}
+          path: test-results/traces/
+          retention-days: 7
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.browser }}
+          path: test-results/screenshots/
+          retention-days: 7
+
+      - name: Upload videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-${{ matrix.browser }}
+          path: test-results/videos/
+          retention-days: 7
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-report-${{ matrix.browser }}
+          path: test-results/reports/
+          retention-days: 30
+
+  notify:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          echo "Tests completed with status: ${{ needs.test.result }}"
+          # Add your notification logic here (Slack, Teams, Email, etc.)

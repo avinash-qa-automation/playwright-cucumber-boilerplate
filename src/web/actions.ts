@@ -1,255 +1,315 @@
-import { Page, ElementHandle, Frame, Response, Locator, Dialog } from '@playwright/test';
-import { Logger } from '../reporting/logger';
+import { Page, Locator } from '@playwright/test';
+import { ErrorHandler, ErrorContext } from '../utils/error-handler';
+import { logger } from '../utils/logger';
 
-type WaitForOptions = 'load' | 'domcontentloaded' | 'networkidle';
-
-/**
- * Custom error class for web actions
- */
-export class WebActionError extends Error {
-    constructor(message: string, public readonly action: string, public readonly selector?: string) {
-        super(`WebAction Failed: ${action}${selector ? ` on '${selector}'` : ''} - ${message}`);
-        this.name = 'WebActionError';
-    }
-}
-
-/**
- * Options for web actions
- */
-export interface WebActionOptions {
-    timeout?: number;
-    force?: boolean;
-    noWaitAfter?: boolean;
-    strict?: boolean;
-    trial?: boolean;
-    waitUntil?: WaitForOptions;
-    modifiers?: ('Alt' | 'Control' | 'Meta' | 'Shift')[];
-}
-
-/**
- * WebActions class provides a wrapper around Playwright's Page with enhanced error handling
- */
 export class WebActions {
-    private readonly page: Page;
-    private readonly logger: Logger;
-    private readonly defaultTimeout: number;
+    private errorHandler: ErrorHandler;
 
-    constructor(page: Page, options?: { defaultTimeout?: number }) {
-        this.page = page;
-        this.logger = new Logger('WebActions');
-        this.defaultTimeout = options?.defaultTimeout ?? 30000;
+    constructor(private page: Page) {
+        this.errorHandler = new ErrorHandler(page);
     }
 
     /**
-     * Safely execute a page action with error handling and logging
+     * Navigate to a URL
      */
-    private async executeAction<T>(
-        action: string, 
-        selector: string | undefined, 
-        callback: () => Promise<T>,
-        details?: Record<string, any>
-    ): Promise<T> {
-        const startTime = Date.now();
-        try {
-            // Log action start at debug level
-            const logMessage = `Executing ${action}${selector ? ` on '${selector}'` : ''}${
-                details ? ` with details: ${JSON.stringify(details)}` : ''
-            }`;
-            this.logger.debug(`🔵 START: ${logMessage}`);
-
-            // Execute the action
-            const result = await callback();
-
-            // Log completion at info level with concise message
-            const duration = Date.now() - startTime;
-            this.logger.info(`✓ ${action}${selector ? ` on '${selector}'` : ''} (${duration}ms)`);
-            // Log detailed success at debug level
-            this.logger.debug(`✅ SUCCESS: ${logMessage}`);
-
-            return result;
-        } catch (error: any) {
-            // Log action failure at error level
-            const duration = Date.now() - startTime;
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ FAILED: ${action}${selector ? ` on '${selector}'` : ''} - ${message} (${duration}ms)`);
-            throw new WebActionError(message, action, selector);
-        }
+    async navigateTo(url: string, options?: { waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' }): Promise<void> {
+        const context: ErrorContext = { action: 'navigate', url };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`🌐 Navigating to URL`, { url });
+            await this.page.goto(url, {
+                waitUntil: options?.waitUntil || 'domcontentloaded',
+                timeout: 30000
+            });
+            logger.debug(`✓ Page loaded successfully`, { url });
+        }, context);
     }
 
     /**
-     * Navigate to a URL with enhanced error handling
+     * Click on an element
      */
-    async navigateTo(url: string, options?: WebActionOptions): Promise<Response | null> {
-        const details = {
-            waitUntil: options?.waitUntil ?? 'load',
-            timeout: options?.timeout ?? this.defaultTimeout
-        };
-        return await this.executeAction('navigate', url, () => 
-            this.page.goto(url, details),
-            details
-        );
+    async click(selector: string, options?: { timeout?: number; force?: boolean }): Promise<void> {
+        const context: ErrorContext = { action: 'click', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`🖱️  Clicking element`, { selector });
+            await this.page.locator(selector).click({
+                timeout: options?.timeout || 10000,
+                force: options?.force
+            });
+            logger.debug(`✓ Click successful`, { selector });
+        }, context);
     }
 
     /**
-     * Click an element with enhanced error handling
+     * Fill an input field
      */
-    async click(selector: string, options?: WebActionOptions): Promise<void> {
-        const details = {
-            timeout: options?.timeout ?? this.defaultTimeout,
-            force: options?.force,
-            noWaitAfter: options?.noWaitAfter,
-            strict: options?.strict,
-            trial: options?.trial,
-            modifiers: options?.modifiers
-        };
-        await this.executeAction('click', selector, () => 
-            this.page.click(selector, details),
-            details
-        );
+    async fill(selector: string, value: string, options?: { timeout?: number; clear?: boolean }): Promise<void> {
+        const context: ErrorContext = { action: 'fill', selector, additionalInfo: { value: '***' } };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`⌨️  Filling input field`, { selector, valueLength: value.length });
+            
+            if (options?.clear) {
+                await this.page.locator(selector).clear();
+            }
+            
+            await this.page.locator(selector).fill(value, {
+                timeout: options?.timeout || 10000
+            });
+            logger.debug(`✓ Input filled`, { selector });
+        }, context);
     }
 
     /**
-     * Fill a form field with text
+     * Type text with delay (simulates human typing)
      */
-    async fill(selector: string, text: string, options?: WebActionOptions): Promise<void> {
-        const details = {
-            timeout: options?.timeout ?? this.defaultTimeout,
-            force: options?.force,
-            noWaitAfter: options?.noWaitAfter,
-            value: text // Include the text being filled for logging
-        };
-        await this.executeAction('fill', selector, () => 
-            this.page.fill(selector, text, details),
-            details
-        );
+    async type(selector: string, text: string, options?: { delay?: number }): Promise<void> {
+        const context: ErrorContext = { action: 'type', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Typing into element: ${selector}`);
+            await this.page.locator(selector).pressSequentially(text, {
+                delay: options?.delay || 50
+            });
+            logger.debug(`Successfully typed into: ${selector}`);
+        }, context);
     }
 
     /**
-     * Check if an element is visible
+     * Select an option from a dropdown
      */
-    async isVisible(selector: string, options?: WebActionOptions): Promise<boolean> {
-        const details = {
-            timeout: options?.timeout ?? this.defaultTimeout
-        };
-        return await this.executeAction('isVisible', selector, () => 
-            this.page.isVisible(selector, details),
-            details
-        );
-    }
-
-    /**
-     * Get text content from an element
-     */
-    async getText(selector: string, options?: WebActionOptions): Promise<string | null> {
-        return await this.executeAction('getText', selector, async () => {
-            const element = await this.page.$(selector);
-            const text = element ? await element.textContent() : null;
-            return text;
-        }, { returnValue: 'text content' });
+    async select(selector: string, value: string | string[]): Promise<void> {
+        const context: ErrorContext = { action: 'select', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Selecting option in: ${selector}`);
+            await this.page.locator(selector).selectOption(value);
+            logger.debug(`Successfully selected option in: ${selector}`);
+        }, context);
     }
 
     /**
      * Wait for an element to be visible
      */
-    async waitForElement(selector: string, options?: WebActionOptions): Promise<void> {
-        const details = {
-            state: 'visible' as const,
-            timeout: options?.timeout ?? this.defaultTimeout
-        };
-        await this.executeAction('waitForElement', selector, () => 
-            this.page.waitForSelector(selector, details),
-            details
-        );
+    async waitForSelector(selector: string, options?: { timeout?: number; state?: 'visible' | 'hidden' | 'attached' }): Promise<void> {
+        const context: ErrorContext = { action: 'waitForSelector', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`⏳ Waiting for element`, { selector, state: options?.state || 'visible' });
+            await this.page.locator(selector).waitFor({
+                state: options?.state || 'visible',
+                timeout: options?.timeout || 30000
+            });
+            logger.debug(`✓ Element ready`, { selector });
+        }, context);
     }
 
     /**
-     * Select an option in a dropdown
+     * Wait for a specific amount of time
      */
-    async selectOption(selector: string, value: string, options?: WebActionOptions): Promise<void> {
-        const details = {
-            value,
-            timeout: options?.timeout ?? this.defaultTimeout,
-            force: options?.force,
-            noWaitAfter: options?.noWaitAfter
-        };
-        await this.executeAction('selectOption', selector, () => 
-            this.page.selectOption(selector, value, details),
-            details
-        );
+    async waitForTimeout(timeout: number): Promise<void> {
+        logger.debug(`Waiting for ${timeout}ms`);
+        await this.page.waitForTimeout(timeout);
     }
 
     /**
-     * Take a screenshot of the page or element
+     * Wait for page load
      */
-    async screenshot(path: string, selector?: string): Promise<void> {
-        const details = { path, targetType: selector ? 'element' : 'page' };
-        await this.executeAction('screenshot', selector, async () => {
-            if (selector) {
-                const element = await this.page.$(selector);
-                if (element) {
-                    await element.screenshot({ path });
-                }
-            } else {
-                await this.page.screenshot({ path });
-            }
-        }, details);
+    async waitForPageLoad(): Promise<void> {
+        const context: ErrorContext = { action: 'waitForPageLoad' };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug('Waiting for page load');
+            await this.page.waitForLoadState('domcontentloaded');
+            logger.debug('Page loaded');
+        }, context);
     }
 
     /**
-     * Press a keyboard key
+     * Wait for network idle
      */
-    async pressKey(key: string, options?: { delay?: number }): Promise<void> {
-        const details = { key, ...options };
-        await this.executeAction('pressKey', undefined, () => 
-            this.page.keyboard.press(key, options),
-            details
-        );
+    async waitForNetworkIdle(): Promise<void> {
+        const context: ErrorContext = { action: 'waitForNetworkIdle' };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug('Waiting for network idle');
+            await this.page.waitForLoadState('networkidle');
+            logger.debug('Network is idle');
+        }, context);
     }
 
     /**
-     * Handle a dialog (alert, confirm, prompt)
+     * Get text content of an element
      */
-    async handleDialog(callback: (dialog: Dialog) => Promise<void>): Promise<void> {
-        await this.executeAction('handleDialog', undefined, () => 
-            new Promise<void>(resolve => {
-                this.page.once('dialog', async dialog => {
-                    this.logger.info(`📢 Dialog appeared: ${dialog.type()} - ${dialog.message()}`);
-                    await callback(dialog);
-                    resolve();
-                });
-            }),
-            { handlerType: 'dialog' }
-        );
+    async getText(selector: string): Promise<string | null> {
+        const context: ErrorContext = { action: 'getText', selector };
+        
+        return await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Getting text from: ${selector}`);
+            const text = await this.page.locator(selector).textContent();
+            logger.debug(`Text retrieved: ${text?.substring(0, 50)}`);
+            return text;
+        }, context);
+    }
+
+    /**
+     * Get attribute value of an element
+     */
+    async getAttribute(selector: string, attribute: string): Promise<string | null> {
+        const context: ErrorContext = { action: 'getAttribute', selector, additionalInfo: { attribute } };
+        
+        return await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Getting attribute '${attribute}' from: ${selector}`);
+            return await this.page.locator(selector).getAttribute(attribute);
+        }, context);
+    }
+
+    /**
+     * Check if element is visible
+     */
+    async isVisible(selector: string, timeout?: number): Promise<boolean> {
+        try {
+            await this.page.locator(selector).waitFor({ 
+                state: 'visible', 
+                timeout: timeout || 5000 
+            });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if element is enabled
+     */
+    async isEnabled(selector: string): Promise<boolean> {
+        return await this.page.locator(selector).isEnabled();
+    }
+
+    /**
+     * Check if checkbox/radio is checked
+     */
+    async isChecked(selector: string): Promise<boolean> {
+        return await this.page.locator(selector).isChecked();
+    }
+
+    /**
+     * Hover over an element
+     */
+    async hover(selector: string): Promise<void> {
+        const context: ErrorContext = { action: 'hover', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Hovering over: ${selector}`);
+            await this.page.locator(selector).hover();
+            logger.debug(`Successfully hovered: ${selector}`);
+        }, context);
     }
 
     /**
      * Double click an element
      */
-    async doubleClick(selector: string, options?: WebActionOptions): Promise<void> {
-        await this.executeAction('doubleClick', selector, () => 
-            this.page.dblclick(selector, {
-                timeout: options?.timeout ?? this.defaultTimeout,
-                force: options?.force,
-                noWaitAfter: options?.noWaitAfter,
-                strict: options?.strict,
-                trial: options?.trial
-            })
-        );
+    async doubleClick(selector: string): Promise<void> {
+        const context: ErrorContext = { action: 'doubleClick', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Double clicking: ${selector}`);
+            await this.page.locator(selector).dblclick();
+            logger.debug(`Successfully double clicked: ${selector}`);
+        }, context);
     }
 
     /**
-     * Right click an element
+     * Press a keyboard key
      */
-    async rightClick(selector: string, options?: WebActionOptions): Promise<void> {
-        await this.executeAction('rightClick', selector, () => 
-            this.page.click(selector, {
-                timeout: options?.timeout ?? this.defaultTimeout,
-                force: options?.force,
-                noWaitAfter: options?.noWaitAfter,
-                strict: options?.strict,
-                trial: options?.trial,
-                button: 'right'
-            })
-        );
+    async press(selector: string, key: string): Promise<void> {
+        const context: ErrorContext = { action: 'press', selector, additionalInfo: { key } };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Pressing key '${key}' on: ${selector}`);
+            await this.page.locator(selector).press(key);
+            logger.debug(`Successfully pressed key: ${key}`);
+        }, context);
+    }
+
+    /**
+     * Scroll to an element
+     */
+    async scrollToElement(selector: string): Promise<void> {
+        const context: ErrorContext = { action: 'scrollToElement', selector };
+        
+        await this.errorHandler.wrapAction(async () => {
+            logger.debug(`Scrolling to element: ${selector}`);
+            await this.page.locator(selector).scrollIntoViewIfNeeded();
+            logger.debug(`Successfully scrolled to: ${selector}`);
+        }, context);
+    }
+
+    /**
+     * Take a screenshot
+     */
+    async screenshot(options?: { path?: string; fullPage?: boolean }): Promise<Buffer> {
+        logger.debug('Taking screenshot');
+        return await this.page.screenshot({
+            path: options?.path,
+            fullPage: options?.fullPage || false
+        });
+    }
+
+    /**
+     * Get current URL
+     */
+    getCurrentUrl(): string {
+        return this.page.url();
+    }
+
+    /**
+     * Get page title
+     */
+    async getTitle(): Promise<string> {
+        return await this.page.title();
+    }
+
+    /**
+     * Reload the page
+     */
+    async reload(): Promise<void> {
+        logger.debug('Reloading page');
+        await this.page.reload();
+        logger.debug('Page reloaded');
+    }
+
+    /**
+     * Go back in browser history
+     */
+    async goBack(): Promise<void> {
+        logger.debug('Going back in history');
+        await this.page.goBack();
+        logger.debug('Navigated back');
+    }
+
+    /**
+     * Go forward in browser history
+     */
+    async goForward(): Promise<void> {
+        logger.debug('Going forward in history');
+        await this.page.goForward();
+        logger.debug('Navigated forward');
+    }
+
+    /**
+     * Execute JavaScript in the browser
+     */
+    async evaluate<T>(script: string | Function, ...args: any[]): Promise<T> {
+        logger.debug('Executing script in browser');
+        return await this.page.evaluate(script as any, ...args);
+    }
+
+    /**
+     * Get locator for advanced operations
+     */
+    getLocator(selector: string): Locator {
+        return this.page.locator(selector);
     }
 }
