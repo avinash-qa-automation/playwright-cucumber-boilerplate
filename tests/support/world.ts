@@ -1,25 +1,25 @@
 import { World as CucumberWorld, setWorldConstructor, IWorldOptions } from '@cucumber/cucumber';
 import { Browser, Page } from '@playwright/test';
 import { WebActions } from '../../src/web/actions';
-import { loginPage } from '../pages/login.page';
-import { productsPage } from '../pages/products.page';
-import { cartPage } from '../pages/cart.page';
+import { LoginPage } from '../pages/login.page';      // ✅ Import class, not object
+import { ProductsPage } from '../pages/products.page'; // ✅ Import class, not object
+import { CartPage } from '../pages/cart.page';         // ✅ Import class, not object
 
 export interface TestWorld extends CucumberWorld {
     browser?: Browser;
     page: Page;
-    loginPage: typeof loginPage;
-    productsPage: typeof productsPage;
-    cartPage: typeof cartPage;
+    loginPage: LoginPage;        // ✅ Use class type
+    productsPage: ProductsPage;  // ✅ Use class type
+    cartPage: CartPage;          // ✅ Use class type
     webActions: WebActions;
 }
 
 export class CustomWorld extends CucumberWorld implements TestWorld {
     public browser?: Browser;
     public page!: Page;
-    public loginPage!: typeof loginPage;
-    public productsPage!: typeof productsPage;
-    public cartPage!: typeof cartPage;
+    public loginPage!: LoginPage;        // ✅ Use class type
+    public productsPage!: ProductsPage;  // ✅ Use class type
+    public cartPage!: CartPage;          // ✅ Use class type
     public webActions!: WebActions;
 
     constructor(options: IWorldOptions) {
@@ -30,18 +30,11 @@ export class CustomWorld extends CucumberWorld implements TestWorld {
         this.page = page;
         this.webActions = new WebActions(this.page);
 
-        // Initialize page objects
-        this.loginPage = loginPage;
-        this.productsPage = productsPage;
-        this.cartPage = cartPage;
-
-        // Set page for each page object
-        this.loginPage.setPage(this.page);
-        this.productsPage.setPage(this.page);
-        this.cartPage.setPage(this.page);
+        // Initialize page objects - instantiate the classes
+        this.loginPage = new LoginPage(this.page, this.webActions);
+        this.productsPage = new ProductsPage(this.page, this.webActions);
+        this.cartPage = new CartPage(this.page, this.webActions);
     }
-
-
 }
 
 setWorldConstructor(CustomWorld);

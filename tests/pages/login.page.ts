@@ -12,27 +12,21 @@ const Locators = {
 
 const URL = 'https://www.saucedemo.com/';
 
-let actions: WebActions;
-let page: Page;
-
 /**
  * Login page actions
  */
-export const loginPage = {
-    /**
-     * Initialize the page
-     */
-    setPage(newPage: Page) {
-        page = newPage;
-        actions = new WebActions(page);
-    },
+export class LoginPage {
+    constructor(
+        private page: Page,
+        private actions: WebActions
+    ) {}
 
     /**
      * Navigate to the login page
      */
     async navigateToLogin(): Promise<void> {
-        await actions.navigateTo(URL);
-    },
+        await this.actions.navigateTo(URL);
+    }
 
     /**
      * Login with the given credentials
@@ -40,19 +34,19 @@ export const loginPage = {
      * @param password Password (defaults to secret_sauce)
      */
     async login(username: string = 'standard_user', password: string = 'secret_sauce'): Promise<void> {
-        await actions.fill(Locators.USERNAME_INPUT, username);
-        await actions.fill(Locators.PASSWORD_INPUT, password);
-        await actions.click(Locators.LOGIN_BUTTON);
-    },
+        await this.actions.fill(Locators.USERNAME_INPUT, username);
+        await this.actions.fill(Locators.PASSWORD_INPUT, password);
+        await this.actions.click(Locators.LOGIN_BUTTON);
+    }
 
     /**
      * Get the error message if login fails
      * @returns The error message text or null if no error
      */
     async getErrorMessage(): Promise<string | null> {
-        const errorElement = await page.$(Locators.ERROR_MESSAGE);
+        const errorElement = await this.page.$(Locators.ERROR_MESSAGE);
         return errorElement ? await errorElement.textContent() : null;
-    },
+    }
 
     /**
      * Check if user is logged in by looking for the inventory list
@@ -60,10 +54,10 @@ export const loginPage = {
      */
     async isLoggedIn(): Promise<boolean> {
         try {
-            await page.waitForSelector(Locators.INVENTORY_LIST, { timeout: 5000 });
+            await this.page.waitForSelector(Locators.INVENTORY_LIST, { timeout: 5000 });
             return true;
         } catch {
             return false;
         }
     }
-} as const;
+}

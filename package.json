@@ -6,8 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test:bdd:ui": "cross-env node tests/run-cucumber.js",
-    "test:ui:parallel": "cross-env node tests/run-cucumber.parallel.js",
+    "test:ui": "cross-env node tests/run-cucumber.js",
+    "test:ui:parallel": "cross-env PARALLEL=2 node tests/run-cucumber.js",
     "lint": "eslint src tests",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "init": "playwright install && npm install"

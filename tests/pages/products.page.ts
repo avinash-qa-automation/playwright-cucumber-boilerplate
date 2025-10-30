@@ -11,20 +11,14 @@ const Locators = {
     ITEM_NAME: '.inventory_item_name'
 } as const;
 
-let actions: WebActions;
-let page: Page;
-
 /**
  * Products page actions
  */
-export const productsPage = {
-    /**
-     * Initialize the page
-     */
-    setPage(newPage: Page) {
-        page = newPage;
-        actions = new WebActions(page);
-    },
+export class ProductsPage {
+    constructor(
+        private page: Page,
+        private actions: WebActions
+    ) {}
 
     /**
      * Add a product to cart by its name
@@ -32,8 +26,8 @@ export const productsPage = {
      */
     async addToCart(productName: string): Promise<void> {
         const selector = `//div[text()="${productName}"]/ancestor::div[@class="inventory_item"]//button[contains(@id, "add-to-cart")]`;
-        await actions.click(selector);
-    },
+        await this.actions.click(selector);
+    }
 
     /**
      * Remove a product from cart by its name
@@ -41,25 +35,25 @@ export const productsPage = {
      */
     async removeFromCart(productName: string): Promise<void> {
         const selector = `//div[text()="${productName}"]/ancestor::div[@class="inventory_item"]//button[contains(@id, "remove")]`;
-        await actions.click(selector);
-    },
+        await this.actions.click(selector);
+    }
 
     /**
      * Get the number of items in the cart
      * @returns The number of items in cart, 0 if cart is empty
      */
     async getCartItemsCount(): Promise<number> {
-        const badge = await page.$(Locators.CART_BADGE);
+        const badge = await this.page.$(Locators.CART_BADGE);
         const text = badge ? await badge.textContent() : null;
         return text ? parseInt(text) : 0;
-    },
+    }
 
     /**
      * Navigate to the cart page
      */
     async goToCart(): Promise<void> {
-        await actions.click(Locators.CART_LINK);
-    },
+        await this.actions.click(Locators.CART_LINK);
+    }
 
     /**
      * Get the price of a specific product
@@ -68,24 +62,24 @@ export const productsPage = {
      */
     async getProductPrice(productName: string): Promise<string | null> {
         const selector = `//div[text()="${productName}"]/ancestor::div[@class="inventory_item"]//div[@class="inventory_item_price"]`;
-        const element = await page.$(selector);
+        const element = await this.page.$(selector);
         return element ? element.textContent() : null;
-    },
+    }
 
     /**
      * Sort products by the given option
      * @param option Sort option: az (A to Z), za (Z to A), lohi (Low to High), hilo (High to Low)
      */
     async sortProducts(option: 'az' | 'za' | 'lohi' | 'hilo'): Promise<void> {
-        await page.selectOption(Locators.SORT_DROPDOWN, option);
-    },
+        await this.page.selectOption(Locators.SORT_DROPDOWN, option);
+    }
 
     /**
      * Get all products from the inventory
      * @returns Array of products with their names and prices
      */
     async getAllProducts(): Promise<{ name: string; price: string; }[]> {
-        const products = await page.$$(Locators.INVENTORY_ITEM);
+        const products = await this.page.$$(Locators.INVENTORY_ITEM);
         const result = [];
 
         for (const product of products) {

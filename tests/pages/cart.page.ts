@@ -21,72 +21,68 @@ type CartItem = {
     quantity: number;
 };
 
-let actions: WebActions;
-let page: Page;
-
 /**
  * Cart page actions
  */
-export const cartPage = {
-    setPage(newPage: Page) {
-        page = newPage;
-        actions = new WebActions(page);
-    },
+export class CartPage {
+    constructor(
+        private page: Page,
+        private actions: WebActions
+    ) {}
 
     /**
      * Get all items currently in the cart
      */
     async getCartItems(): Promise<CartItem[]> {
-        const cartItems = [];
-        const items = await page.$$eval(Locators.CART_ITEM, (elements: HTMLElement[]) => {
+        const items = await this.page.$$eval(Locators.CART_ITEM, (elements: HTMLElement[]) => {
             return elements.map((el) => {
-                const name = el.querySelector(Locators.ITEM_NAME)?.textContent || '';
-                const price = el.querySelector(Locators.ITEM_PRICE)?.textContent || '';
+                const name = el.querySelector('.inventory_item_name')?.textContent || '';
+                const price = el.querySelector('.inventory_item_price')?.textContent || '';
                 return { name, price, quantity: 1 }; // Default quantity is 1 as SauceDemo doesn't support quantity changes
             });
         });
         return items;
-    },
+    }
 
     /**
      * Click checkout button to proceed to checkout
      */
     async proceedToCheckout(): Promise<void> {
-        await actions.click(Locators.CHECKOUT_BUTTON);
-    },
+        await this.actions.click(Locators.CHECKOUT_BUTTON);
+    }
 
     /**
      * Fill checkout information form
      */
     async fillCheckoutInfo(firstName: string, lastName: string, postalCode: string): Promise<void> {
-        await actions.fill(Locators.FIRST_NAME_INPUT, firstName);
-        await actions.fill(Locators.LAST_NAME_INPUT, lastName);
-        await actions.fill(Locators.POSTAL_CODE_INPUT, postalCode);
-        await actions.click(Locators.CONTINUE_BUTTON);
-    },
+        await this.actions.fill(Locators.FIRST_NAME_INPUT, firstName);
+        await this.actions.fill(Locators.LAST_NAME_INPUT, lastName);
+        await this.actions.fill(Locators.POSTAL_CODE_INPUT, postalCode);
+        await this.actions.click(Locators.CONTINUE_BUTTON);
+    }
 
     /**
      * Complete the order by clicking finish button
      */
     async completeOrder(): Promise<void> {
-        await actions.click(Locators.FINISH_BUTTON);
-    },
+        await this.actions.click(Locators.FINISH_BUTTON);
+    }
 
     /**
      * Get the confirmation message after order completion
      */
     async getConfirmationMessage(): Promise<string | null> {
-        const messageElement = await page.$(Locators.CONFIRMATION_HEADER);
+        const messageElement = await this.page.$(Locators.CONFIRMATION_HEADER);
         return messageElement ? await messageElement.textContent() : null;
-    },
+    }
 
     /**
      * Remove a specific item from cart by product name
-     */
+     */ 
     async removeItem(productName: string): Promise<void> {
         const selector = `//div[text()="${productName}"]/ancestor::div[@class="cart_item"]//button[contains(@id, "remove")]`;
-        await actions.click(selector);
-    },
+        await this.actions.click(selector);
+    }
 
     /**
      * Calculate total price of items in cart
