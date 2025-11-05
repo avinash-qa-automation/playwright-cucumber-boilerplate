@@ -5,6 +5,8 @@ import { LoginPage } from '../pages/login.page';
 import { ProductsPage } from '../pages/products.page';
 import { CartPage } from '../pages/cart.page';
 import { ScenarioLogger } from '../../src/utils/logger';
+import { ApiClient } from '../../src/api/api-client';
+import { NetworkHelper } from '../../src/web/network-helper';
 
 export interface TestWorld extends CucumberWorld {
     browser?: Browser;
@@ -14,6 +16,8 @@ export interface TestWorld extends CucumberWorld {
     cartPage: CartPage;
     webActions: WebActions;
     scenarioLogger: ScenarioLogger;
+    apiClient: ApiClient;
+    networkHelper: NetworkHelper;
 }
 
 export class CustomWorld extends CucumberWorld implements TestWorld {
@@ -24,6 +28,8 @@ export class CustomWorld extends CucumberWorld implements TestWorld {
     public cartPage!: CartPage;
     public webActions!: WebActions;
     public scenarioLogger!: ScenarioLogger;
+    public apiClient!: ApiClient;
+    public networkHelper!: NetworkHelper;
 
     constructor(options: IWorldOptions) {
         super(options);
@@ -38,6 +44,25 @@ export class CustomWorld extends CucumberWorld implements TestWorld {
         this.loginPage = new LoginPage(this.page, this.webActions);
         this.productsPage = new ProductsPage(this.page, this.webActions);
         this.cartPage = new CartPage(this.page, this.webActions);
+
+        // Initialize API client
+        this.apiClient = new ApiClient();
+        await this.apiClient.init();
+
+        // Initialize network helper
+        this.networkHelper = new NetworkHelper(this.page);
+    }
+
+    async cleanup(): Promise<void> {
+        // Dispose API client
+        if (this.apiClient) {
+            await this.apiClient.dispose();
+        }
+
+        // Stop network logging if active
+        if (this.networkHelper) {
+            this.networkHelper.stopCapturingLogs();
+        }
     }
 }
 

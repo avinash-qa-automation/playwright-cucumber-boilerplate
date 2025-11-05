@@ -203,6 +203,7 @@ After(async function(this: CustomWorld, { pickle, result }) {
         }
 
         // Close page and context
+        await this.cleanup();
         await this.page.context().close();
         scenarioLogger.info('Browser context closed');
 
