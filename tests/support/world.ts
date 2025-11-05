@@ -7,6 +7,10 @@ import { CartPage } from '../pages/cart.page';
 import { ScenarioLogger } from '../../src/utils/logger';
 import { ApiClient } from '../../src/api/api-client';
 import { NetworkHelper } from '../../src/web/network-helper';
+import { VisualTesting } from '../../src/visual/visual-testing';
+import { PerformanceHelper } from '../../src/performance/performance-helper';
+import { AccessibilityHelper } from '@/accessibility/accessibility-helper';
+import { MobileHelper } from '@/mobile/mobile-helper';
 
 export interface TestWorld extends CucumberWorld {
     browser?: Browser;
@@ -18,6 +22,10 @@ export interface TestWorld extends CucumberWorld {
     scenarioLogger: ScenarioLogger;
     apiClient: ApiClient;
     networkHelper: NetworkHelper;
+    visualTesting: VisualTesting;
+    performanceHelper: PerformanceHelper;
+    accessibilityHelper: AccessibilityHelper;
+    mobileHelper: MobileHelper;
 }
 
 export class CustomWorld extends CucumberWorld implements TestWorld {
@@ -30,6 +38,10 @@ export class CustomWorld extends CucumberWorld implements TestWorld {
     public scenarioLogger!: ScenarioLogger;
     public apiClient!: ApiClient;
     public networkHelper!: NetworkHelper;
+    public visualTesting!: VisualTesting;
+    public performanceHelper!: PerformanceHelper;
+    public accessibilityHelper!: AccessibilityHelper;
+    public mobileHelper!: MobileHelper;
 
     constructor(options: IWorldOptions) {
         super(options);
