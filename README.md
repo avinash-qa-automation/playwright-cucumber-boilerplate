@@ -877,7 +877,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 **Email**: avinash.pagunta@example.com
+- 📧 **Email**: avinash.pagunta@gmail.com
 - 🐛 **Issues**: [GitHub Issues](https://github.com/avinash-qa-automation/playwright-cucumber-framework/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/avinash-qa-automation/playwright-cucumber-framework/discussions)
 - 📖 **Documentation**: See documentation files in repository
