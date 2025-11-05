@@ -770,10 +770,6 @@ test:
 ## 📚 Documentation
 
 - **README.md** - This comprehensive guide
-- **TEST_COMMANDS.md** - Complete command reference with examples
-- **PHASE2_FEATURES.md** - API Testing, Network Control, Test Data
-- **PHASE3_FEATURES.md** - Visual, Performance, Accessibility, Mobile
-- **FRAMEWORK_COMPLETE.md** - Final summary and capabilities
 
 ---
 
@@ -881,9 +877,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 **Email**: your.email@example.com
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/playwright-cucumber-framework/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/playwright-cucumber-framework/discussions)
+- 📧 **Email**: avinash.pagunta@example.com
+- 🐛 **Issues**: [GitHub Issues](https://github.com/avinash-qa-automation/playwright-cucumber-framework/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/avinash-qa-automation/playwright-cucumber-framework/discussions)
 - 📖 **Documentation**: See documentation files in repository
 
 ---
@@ -910,26 +906,6 @@ npm run test:performance
 npm run test:accessibility
 npm run test:mobile
 ```
-
----
-
-## 🏆 Framework Capabilities
-
-| Feature | Status | Documentation |
-|---------|--------|---------------|
-| UI Testing | ✅ Complete | README.md |
-| API Testing | ✅ Complete | PHASE2_FEATURES.md |
-| Visual Regression | ✅ Complete | PHASE3_FEATURES.md |
-| Performance Testing | ✅ Complete | PHASE3_FEATURES.md |
-| Accessibility Testing | ✅ Complete | PHASE3_FEATURES.md |
-| Mobile Testing | ✅ Complete | PHASE3_FEATURES.md |
-| Network Control | ✅ Complete | PHASE2_FEATURES.md |
-| Test Data Management | ✅ Complete | PHASE2_FEATURES.md |
-| Parallel Execution | ✅ Complete | README.md |
-| CI/CD Integration | ✅ Complete | README.md |
-| Enhanced Reporting | ✅ Complete | README.md |
-
----
 
 <div align="center">
 
